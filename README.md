@@ -1,1 +1,1 @@
-# SpaceShooter
+print("hello world")
