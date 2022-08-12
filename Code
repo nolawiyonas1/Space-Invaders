@@ -55,7 +55,7 @@ font = pygame.font.Font('freesansbold.ttf', 32)  # choosing a font  * freesansbo
 textX = 10  # x and y coordinate of where the score is located
 textY = 10
 
-# Game over text
+# Game over text 
 over_font = pygame.font.Font('freesansbold.ttf', 64)
 
 
