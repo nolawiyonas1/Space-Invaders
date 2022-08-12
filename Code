@@ -1,0 +1,177 @@
+import pygame
+from pygame import mixer
+import random
+import math
+
+pygame.init()
+
+# creating the screen
+screen = pygame.display.set_mode((800, 600))  # (width, height)
+
+# background
+background = pygame.image.load("spaceship_background.png")
+
+# background sound
+mixer.music.load("background.wav")
+mixer.music.play(-1)  # write -1 so music always plays
+
+# title & icon
+pygame.display.set_caption("Space Invaders")
+icon = pygame.image.load("spaceship_icon.png")
+pygame.display.set_icon(icon)
+
+# player
+playerImg = pygame.image.load("spaceship.png")  # image is 64 x 64
+playerX = 370
+playerY = 480
+playerX_change = 0
+
+# enemy
+enemyImg = []
+enemyX = []
+enemyY = []
+enemyX_change = []
+enemyY_change = []
+num_of_enemies = 6
+
+for i in range(num_of_enemies):  # the values below are added into the lists above
+    enemyImg.append(pygame.image.load("enemy.png"))  # image is 64 x 64
+    enemyX.append(random.randint(0, 735))
+    enemyY.append(random.randint(50, 150))
+    enemyX_change.append(0.25)
+    enemyY_change.append(40)
+
+# bullet
+bulletImg = pygame.image.load("bullet.png")  # 32 x 32px
+bulletX = 0
+bulletY = 480
+bulletX_change = 0.3
+bulletY_change = 0.7
+bullet_state = "ready"  # READY-bullet is not visible  FIRE-bullet is moving
+
+score_value = 0  # the score
+font = pygame.font.Font('freesansbold.ttf', 32)  # choosing a font  * freesansbold is the only font available rn
+
+textX = 10  # x and y coordinate of where the score is located
+textY = 10
+
+# Game over text
+over_font = pygame.font.Font('freesansbold.ttf', 64)
+
+
+def show_score(x, y):
+    score = font.render("Score: " + str(score_value), True, (255, 255, 255))
+    # render() takes in 4 values (text to display, what to display, True, color
+    screen.blit(score, (x, y))
+
+
+def game_over_text():
+    over_text = over_font.render("GAME OVER", True, (255, 255, 255))
+    screen.blit(over_text, (200, 250))
+
+
+def player(x, y):
+    screen.blit(playerImg, (x, y))
+
+
+def enemy(x, y, i):
+    screen.blit(enemyImg[i], (x, y))
+
+
+def fire_bullet(x, y):
+    global bullet_state  # made the variable "bullet_state" global so it can be accessed inside this function
+    bullet_state = "fire"
+    screen.blit(bulletImg, (x + 16, y + 10))
+
+
+def isCollision(enemyX, enemyY, bulletX, bulletY):
+    distance = math.sqrt(
+        (math.pow(enemyX - bulletX, 2)) + (math.pow(enemyY - bulletY, 2)))  # d = √[(x2-x1)squared + (y2-y1)squared]
+    if distance < 27:  # if the distance between enemy and bullet is less than 27, that is a collision
+        return True
+    else:
+        return False
+
+
+running = True
+while running:
+
+    # background color RGB
+    screen.fill((0, 0, 0))
+
+    # background image
+    screen.blit(background, (0, 0))  # background is the variable created at the top
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
+        if event.type == pygame.KEYDOWN:  # KEYDOWN(key is pressed down)
+            if event.key == pygame.K_LEFT:
+                playerX_change = -0.45
+            if event.key == pygame.K_RIGHT:
+                playerX_change = 0.45
+            if event.key == pygame.K_SPACE:
+                if bullet_state is "ready":
+                    bullet_Sound = mixer.Sound("laser.wav")
+                    bullet_Sound.play()
+                    bulletX = playerX  # this is important so the bullet is not on the same x coordinate as player
+                    # This line is saving the x coordinate of player when the space key is pressed
+                    fire_bullet(playerX, bulletY)
+
+        if event.type == pygame.KEYUP:  # KEYUP(key is not pressed)
+            if event.key == pygame.K_LEFT or event.key == pygame.K_RIGHT:
+                playerX_change = 0
+
+    playerX += playerX_change
+
+    # creating boundary by returning spaceship to the edge
+    if playerX < 0:
+        playerX = 0
+    elif playerX > 736:  # 736 because 800-64(pixel of playerImg) = 736.The whole image should not go through the border
+        playerX = 736
+
+    # setting boundaries for enemy
+    enemyX += enemyX_change
+
+    # creating boundary by returning spaceship to the edge
+    for i in range(num_of_enemies):
+        # GAME OVER
+        if enemyY[i] > 440:
+            for j in range(num_of_enemies):
+                enemyY[j] = 2000  # 2000 so they won't appear on text
+            game_over_text()
+            break
+
+        enemyX[i] += enemyX_change[i]  # adding "[i]" after enemy to indicate which enemy it is about(from the list)
+        if enemyX[i] < 0:
+            enemyX_change[i] = 0.5
+            enemyY[i] += enemyY_change[i]
+        elif enemyX[i] > 736:
+            enemyX_change[i] = -0.5
+            enemyY[i] += enemyY_change[i]
+
+        # Collision
+        collision = isCollision(enemyX[i], enemyY[i], bulletX, bulletY)
+        if collision:
+            collision_Sound = mixer.Sound("explosion.wav")
+            collision_Sound.play()
+            bulletY = 480
+            bullet_state = "ready"
+            score_value += 1
+            enemyX[i] = random.randint(0, 735)
+            enemyY[i] = random.randint(50, 150)
+
+        enemy(enemyX[i], enemyY[i], i)
+
+    # Bullet movement
+    if bulletY <= 0:  # top of the screen
+        bulletY = 480
+        bullet_state = "ready"
+
+    if bullet_state == "fire":
+        fire_bullet(bulletX, bulletY)
+        bulletY -= bulletY_change
+
+    player(playerX, playerY)
+    show_score(textX, textY)
+    pygame.display.update()
